@@ -33,7 +33,7 @@ CXXFLAGS = -std=c++17 -Wall -O3 $(EMS_FLAGS) -D__EMSCRIPTEN__ \
 TARGET = web/index.html
 
 # Object groups
-APP_SRCS = src/main.cpp src/gameController.cpp
+APP_SRCS = src/main.cpp src/gameController.cpp src/assetManager.cpp src/gameScene.cpp src/mainMenuScene.cpp src/newGameScene.cpp src/boardWidget.cpp
 # GNU Make wildcard doesn't handle spaces well. We'll use a shell command to expand these.
 WIDGET_SRCS = $(shell find "$(WIDGET_DIR)/src" -name "*.cpp")
 ICECREAM_SRCS = $(shell find "$(ICECREAM_DIR)/src" -name "*.cpp")
@@ -48,10 +48,7 @@ STATIC_LIBS = $(SDL_IMAGE_DIR)/build/libSDL3_image.a \
 all: $(TARGET)
 
 $(TARGET): $(ALL_SRCS)
-	mkdir -p web
 	$(CXX) $(CXXFLAGS) $(ALL_SRCS) $(STATIC_LIBS) -o $(TARGET)
-	cp manifest.json web/
-	cp assets/icon.png web/icon.png
 
 clean:
-	rm -rf  web/*
+	rm -rf  web/index.html web/*.js web/*.wasm web/*.data
