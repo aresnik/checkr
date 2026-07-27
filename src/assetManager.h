@@ -12,6 +12,9 @@
 #include <SDL3_ttf/SDL_ttf.h>
 #include <SDL3_mixer/SDL_mixer.h>
 #include <string>
+#include <unordered_map>
+
+class TextureButton;
 
 class AssetManager
 {
@@ -30,33 +33,6 @@ public:
     SDL_Texture *blackKingTexture = nullptr;
     SDL_Texture *legalMoveTexture = nullptr;
 
-    // UI Button Textures
-    SDL_Texture *newGameTex = nullptr;
-    SDL_Texture *newGameFilledTex = nullptr;
-    SDL_Texture *undoTex = nullptr;
-    SDL_Texture *undoFilledTex = nullptr;
-    SDL_Texture *redoTex = nullptr;
-    SDL_Texture *redoFilledTex = nullptr;
-
-    SDL_Texture *onePlayerTex = nullptr;
-    SDL_Texture *onePlayerFilledTex = nullptr;
-    SDL_Texture *twoPlayerTex = nullptr;
-    SDL_Texture *twoPlayerFilledTex = nullptr;
-    SDL_Texture *resumeTex = nullptr;
-    SDL_Texture *resumeFilledTex = nullptr;
-    SDL_Texture *soundOnTex = nullptr;
-    SDL_Texture *soundOnFilledTex = nullptr;
-    SDL_Texture *soundOffTex = nullptr;
-    SDL_Texture *soundOffFilledTex = nullptr;
-
-    SDL_Texture *homePageTex = nullptr;
-    SDL_Texture *homePageFilledTex = nullptr;
-    SDL_Texture *privacyTex = nullptr;
-    SDL_Texture *privacyFilledTex = nullptr;
-
-    SDL_Texture *homeTex = nullptr;
-    SDL_Texture *homeFilledTex = nullptr;
-
     // Audio
     MIX_Audio *moveSfx = nullptr;
     MIX_Audio *captureSfx = nullptr;
@@ -66,7 +42,23 @@ public:
     bool loadAssets(SDL_Window *window, SDL_Renderer *renderer, MIX_Mixer *mixer);
     void freeAssets();
 
+    // High-DPI and SVG Support
+    void updateDisplayScale(float newScale);
+    SDL_Texture *getButtonTexture(const std::string &filepath, int logicalWidth, int logicalHeight);
+    void clearCache();
+    
+    // Bind SVG textures to a button using a generic callback (maintaining project separation)
+    void setupButtonSVG(TextureButton &button, const std::string &normalPath, const std::string &hoverPath = "", const std::string &pressedPath = "");
+
+    float getDisplayScale() const { return m_currentDisplayScale; }
+
+    ~AssetManager();
+
 private:
+    SDL_Renderer *m_renderer = nullptr;
+    float m_currentDisplayScale = 1.0f;
+    std::unordered_map<std::string, SDL_Texture *> m_textureCache;
+
     // Procedural Fallback Generators
     SDL_Texture *createBoardTexture(SDL_Renderer *renderer, int size);
     SDL_Texture *createRectTexture(SDL_Renderer *renderer, int w, int h, Uint8 r, Uint8 g, Uint8 b, Uint8 a);

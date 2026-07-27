@@ -8,20 +8,24 @@
 #include "appState.h"
 #include <algorithm>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 MainMenuScene::MainMenuScene(AppState *state)
 {
     titleLbl.load(state->renderer, state->assets.font, "Checkr", {255, 255, 255, 255});
     titleLbl.setAlignment(Label::ALIGN_CENTER);
-    onePlayerBtn.setTextures(state->assets.onePlayerTex, state->assets.onePlayerTex, state->assets.onePlayerFilledTex);
-    twoPlayerBtn.setTextures(state->assets.twoPlayerTex, state->assets.twoPlayerTex, state->assets.twoPlayerFilledTex);
-    resumeBtn.setTextures(state->assets.resumeTex, state->assets.resumeTex, state->assets.resumeFilledTex);
+    state->assets.setupButtonSVG(onePlayerBtn, "assets/one_player.svg", "assets/one_player.svg", "assets/one_player_filled.svg");
+    state->assets.setupButtonSVG(twoPlayerBtn, "assets/two_players.svg", "assets/two_players.svg", "assets/two_players_filled.svg");
+    state->assets.setupButtonSVG(resumeBtn, "assets/resume_game.svg", "assets/resume_game.svg", "assets/resume_game_filled.svg");
     if (state->soundEnabled)
-        soundBtn.setTextures(state->assets.soundOnTex, state->assets.soundOnTex, state->assets.soundOnFilledTex);
+        state->assets.setupButtonSVG(soundBtn, "assets/sound_on.svg", "assets/sound_on.svg", "assets/sound_on_filled.svg");
     else
-        soundBtn.setTextures(state->assets.soundOffTex, state->assets.soundOffTex, state->assets.soundOffFilledTex);
+        state->assets.setupButtonSVG(soundBtn, "assets/sound_off.svg", "assets/sound_off.svg", "assets/sound_off_filled.svg");
 
-    homePageBtn.setTextures(state->assets.homePageTex, state->assets.homePageTex, state->assets.homePageFilledTex);
-    privacyBtn.setTextures(state->assets.privacyTex, state->assets.privacyTex, state->assets.privacyFilledTex);
+    state->assets.setupButtonSVG(homePageBtn, "assets/home_page.svg", "assets/home_page.svg", "assets/home_page_filled.svg");
+    state->assets.setupButtonSVG(privacyBtn, "assets/privacy.svg", "assets/privacy.svg", "assets/privacy_filled.svg");
 
     // Visually disable resume button if no game is in progress
     if (!state->savedGameScene)
@@ -52,9 +56,9 @@ MainMenuScene::MainMenuScene(AppState *state)
                                 {
         state->soundEnabled = !state->soundEnabled;
         if (state->soundEnabled)
-            soundBtn.setTextures(state->assets.soundOnTex, state->assets.soundOnTex, state->assets.soundOnFilledTex);
+            state->assets.setupButtonSVG(soundBtn, "assets/sound_on.svg", "assets/sound_on.svg", "assets/sound_on_filled.svg");
         else
-            soundBtn.setTextures(state->assets.soundOffTex, state->assets.soundOffTex, state->assets.soundOffFilledTex); });
+            state->assets.setupButtonSVG(soundBtn, "assets/sound_off.svg", "assets/sound_off.svg", "assets/sound_off_filled.svg"); });
 
     homePageBtn.setOnClickCallback([]()
                                    {
@@ -91,7 +95,7 @@ MainMenuScene::MainMenuScene(AppState *state)
     btnWrapperHBox.addChild(&btnVBox, 2.0f);
     btnWrapperHBox.addChild(&spacers[8], 1.0f);
 
-    mainVBox.addChild(&spacers[6], 0.8f);
+    mainVBox.addChild(&spacers[9], 0.8f);
     mainVBox.addChild(&titleHBox, 1.0f);
     mainVBox.addChild(&spacers[10], 0.3f);
     mainVBox.addChild(&btnWrapperHBox, 5.0f);
@@ -104,6 +108,9 @@ void MainMenuScene::enter(AppState *state)
 {
     // Re-enable the screensaver when on the main menu
     SDL_EnableScreenSaver();
+#ifdef __EMSCRIPTEN__
+    emscripten_run_script("window.currentSceneId = 0; window.lastSceneTransitionTime = Date.now();");
+#endif
 }
 
 void MainMenuScene::handleEvent(AppState *state, SDL_Event *event)
@@ -115,6 +122,15 @@ void MainMenuScene::handleEvent(AppState *state, SDL_Event *event)
 void MainMenuScene::update(AppState *state)
 {
     rootStack.updateLayout(0, 0, state->screenW, state->screenH);
+#ifdef __EMSCRIPTEN__
+    EM_ASM(({
+        window.homePageBtnBounds = { x: $0, y: $1, w: $2, h: $3 };
+        window.privacyBtnBounds = { x: $4, y: $5, w: $6, h: $7 };
+    }), 
+    homePageBtn.rect.x, homePageBtn.rect.y, homePageBtn.rect.w, homePageBtn.rect.h,
+    privacyBtn.rect.x, privacyBtn.rect.y, privacyBtn.rect.w, privacyBtn.rect.h
+    );
+#endif
 }
 
 void MainMenuScene::render(AppState *state)

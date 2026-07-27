@@ -110,6 +110,12 @@ extern "C" SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
         return SDL_APP_SUCCESS;
     }
 
+    if (event->type == SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED)
+    {
+        float newScale = SDL_GetWindowDisplayScale(state->window);
+        state->assets.updateDisplayScale(newScale);
+    }
+
     // Convert all pointer events (motion and clicks) to the logical 400x800 coordinate system.
     // This ensures hit detection works correctly on High-DPI (Retina) mobile screens.
     if (event->type == SDL_EVENT_MOUSE_MOTION ||

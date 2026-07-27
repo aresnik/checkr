@@ -134,6 +134,8 @@
 
     <!-- Emscripten JavaScript Hooks -->
     <script type='text/javascript'>
+        window.currentSceneId = 0; // 0: MainMenu, 1: Game, 2: NewGame
+        window.lastSceneTransitionTime = 0;
         var statusElement = document.getElementById('status');
         var spinnerElement = document.getElementById('spinner');
         var loadingContainer = document.getElementById('loading-container');
@@ -187,33 +189,34 @@
 
         // Synchronous click listener to bypass popup blockers for external links
         document.getElementById('canvas').addEventListener('click', function (e) {
+            // Ignore click events that occur shortly after a scene transition (ghost clicks)
+            if (Date.now() - window.lastSceneTransitionTime < 500) {
+                return;
+            }
+
             var canvas = e.target;
             var rect = canvas.getBoundingClientRect();
 
-            var logicalX = e.clientX - rect.left;
-            var logicalY = e.clientY - rect.top;
+            // Convert CSS/client coordinates to C++ physical/render coordinates
+            var clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            var clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
 
-            // Calculate dynamic UI sizes matching mainMenuScene.cpp
-            var w = rect.width;
-            var h = rect.height;
-            var minDim = Math.min(w, h);
-
-            var bottomBtnSize = minDim * 0.15;
-            var spacing = w * 0.05;
-            var totalBottomW = (bottomBtnSize * 3.0) + (spacing * 2.0);
-            var startX = (w - totalBottomW) / 2.0;
-            var y = h - bottomBtnSize - (h * 0.05);
-
-            // Home Button bounds
-            var homeX = startX + bottomBtnSize + spacing;
-            if (logicalX >= homeX && logicalX <= homeX + bottomBtnSize && logicalY >= y && logicalY <= y + bottomBtnSize) {
-                window.open('https://glassoniongames.com', '_blank');
+            // Check if click is inside homePageBtn bounds
+            if (window.homePageBtnBounds) {
+                var b = window.homePageBtnBounds;
+                if (clickX >= b.x && clickX <= b.x + b.w && clickY >= b.y && clickY <= b.y + b.h) {
+                    window.open('https://glassoniongames.com', '_blank');
+                    return;
+                }
             }
 
-            // Privacy Button bounds
-            var privX = startX + (bottomBtnSize * 2.0) + (spacing * 2.0);
-            if (logicalX >= privX && logicalX <= privX + bottomBtnSize && logicalY >= y && logicalY <= y + bottomBtnSize) {
-                window.open('https://glassoniongames.com/privacy-policy/', '_blank');
+            // Check if click is inside privacyBtn bounds
+            if (window.privacyBtnBounds) {
+                var b = window.privacyBtnBounds;
+                if (clickX >= b.x && clickX <= b.x + b.w && clickY >= b.y && clickY <= b.y + b.h) {
+                    window.open('https://glassoniongames.com/privacy-policy/', '_blank');
+                    return;
+                }
             }
         });
     </script>

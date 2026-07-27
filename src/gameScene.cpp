@@ -10,15 +10,19 @@
 #include <string>
 #include <algorithm>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 GameScene::GameScene(AppState *state)
 {
     boardWidget.setAppState(state);
 
-    newGameBtn.setTextures(state->assets.newGameTex, state->assets.newGameTex, state->assets.newGameFilledTex);
-    undoBtn.setTextures(state->assets.undoTex, state->assets.undoTex, state->assets.undoFilledTex);
-    redoBtn.setTextures(state->assets.redoTex, state->assets.redoTex, state->assets.redoFilledTex);
+    state->assets.setupButtonSVG(newGameBtn, "assets/new_game.svg", "assets/new_game.svg", "assets/new_game_filled.svg");
+    state->assets.setupButtonSVG(undoBtn, "assets/undo.svg", "assets/undo.svg", "assets/undo_filled.svg");
+    state->assets.setupButtonSVG(redoBtn, "assets/redo.svg", "assets/redo.svg", "assets/redo_filled.svg");
 
-    homeBtn.setTextures(state->assets.homeTex, state->assets.homeTex, state->assets.homeFilledTex);
+    state->assets.setupButtonSVG(homeBtn, "assets/home.svg", "assets/home.svg", "assets/home_filled.svg");
 
     newGameBtn.setOnClickCallback([state]()
                                   { state->nextScene = SceneID::NewGame; });
@@ -116,6 +120,10 @@ void GameScene::enter(AppState *state)
 {
     // Prevent the screen from sleeping during gameplay
     SDL_DisableScreenSaver();
+
+#ifdef __EMSCRIPTEN__
+    emscripten_run_script("window.currentSceneId = 1; window.homePageBtnBounds = null; window.privacyBtnBounds = null; window.lastSceneTransitionTime = Date.now();");
+#endif
 
     controller.pvpMode = state->pvpMode;
 

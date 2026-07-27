@@ -7,6 +7,9 @@
 #include "newGameScene.h"
 #include "appState.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 NewGameScene::NewGameScene(AppState *state)
 {
     if (state->assets.font)
@@ -31,7 +34,7 @@ NewGameScene::NewGameScene(AppState *state)
         difficultySlider.setLabel(4, state->renderer, state->assets.uiFontSmall, "1min", white);
     }
 
-    startBtn.setTextures(state->assets.newGameTex, state->assets.newGameTex, state->assets.newGameFilledTex);
+    state->assets.setupButtonSVG(startBtn, "assets/new_game.svg", "assets/new_game.svg", "assets/new_game_filled.svg");
     startBtn.setOnClickCallback([this, state]()
                                 {
                                     if (!state->pvpMode)
@@ -39,7 +42,7 @@ NewGameScene::NewGameScene(AppState *state)
                                     state->startNewGame = true;
                                     state->nextScene = SceneID::Game; });
 
-    homeBtn.setTextures(state->assets.homeTex, state->assets.homeTex, state->assets.homeFilledTex);
+    state->assets.setupButtonSVG(homeBtn, "assets/home.svg", "assets/home.svg", "assets/home_filled.svg");
     homeBtn.setOnClickCallback([state]()
                                { state->nextScene = SceneID::MainMenu; });
 
@@ -84,6 +87,9 @@ NewGameScene::NewGameScene(AppState *state)
 
 void NewGameScene::enter(AppState *state)
 {
+#ifdef __EMSCRIPTEN__
+    emscripten_run_script("window.currentSceneId = 2; window.homePageBtnBounds = null; window.privacyBtnBounds = null; window.lastSceneTransitionTime = Date.now();");
+#endif
 }
 
 void NewGameScene::handleEvent(AppState *state, SDL_Event *event)

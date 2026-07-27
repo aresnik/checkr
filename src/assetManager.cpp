@@ -5,6 +5,7 @@
  */
 
 #include "assetManager.h"
+#include "textureButton.h"
 
 std::string AssetManager::getAssetPath(const std::string &relativePath)
 {
@@ -66,6 +67,9 @@ std::string AssetManager::getAssetPath(const std::string &relativePath)
 
 bool AssetManager::loadAssets(SDL_Window *window, SDL_Renderer *renderer, MIX_Mixer *mixer)
 {
+    m_renderer = renderer;
+    m_currentDisplayScale = SDL_GetWindowDisplayScale(window);
+
     bool success = true;
 
     // Set window icon
@@ -129,52 +133,6 @@ bool AssetManager::loadAssets(SDL_Window *window, SDL_Renderer *renderer, MIX_Mi
         winSfx = MIX_LoadAudio(mixer, getAssetPath("assets/win.wav").c_str(), false);
     }
 
-    // Load UI Elements
-    auto loadUITex = [&](const std::string &path, Uint8 r, Uint8 g, Uint8 b) -> SDL_Texture *
-    {
-        SDL_Texture *t = IMG_LoadTexture(renderer, getAssetPath(path).c_str());
-        if (!t)
-        {
-            SDL_Log("Warning: Missing UI asset %s. Using procedural fallback.", path.c_str());
-            t = createRectTexture(renderer, 50, 50, r, g, b, 255);
-        }
-        return t;
-    };
-
-    // Load button textures
-    newGameTex = loadUITex("assets/new_game.png", 100, 100, 100);
-    newGameFilledTex = loadUITex("assets/new_game_filled.png", 150, 150, 150);
-
-    undoTex = loadUITex("assets/undo.png", 100, 100, 100);
-    undoFilledTex = loadUITex("assets/undo_filled.png", 150, 150, 150);
-
-    redoTex = loadUITex("assets/redo.png", 100, 100, 100);
-    redoFilledTex = loadUITex("assets/redo_filled.png", 150, 150, 150);
-
-    onePlayerTex = loadUITex("assets/one_player.png", 100, 100, 100);
-    onePlayerFilledTex = loadUITex("assets/one_player_filled.png", 150, 150, 150);
-
-    twoPlayerTex = loadUITex("assets/two_players.png", 100, 100, 100);
-    twoPlayerFilledTex = loadUITex("assets/two_players_filled.png", 150, 150, 150);
-
-    resumeTex = loadUITex("assets/resume_game.png", 100, 100, 100);
-    resumeFilledTex = loadUITex("assets/resume_game_filled.png", 150, 150, 150);
-
-    soundOnTex = loadUITex("assets/sound_on.png", 100, 100, 100);
-    soundOnFilledTex = loadUITex("assets/sound_on_filled.png", 150, 150, 150);
-
-    soundOffTex = loadUITex("assets/sound_off.png", 100, 100, 100);
-    soundOffFilledTex = loadUITex("assets/sound_off_filled.png", 150, 150, 150);
-
-    homePageTex = loadUITex("assets/home_page.png", 100, 100, 100);
-    homePageFilledTex = loadUITex("assets/home_page_filled.png", 150, 150, 150);
-
-    privacyTex = loadUITex("assets/privacy.png", 100, 100, 100);
-    privacyFilledTex = loadUITex("assets/privacy_filled.png", 150, 150, 150);
-
-    homeTex = loadUITex("assets/home.png", 100, 100, 100);
-    homeFilledTex = loadUITex("assets/home_filled.png", 150, 150, 150);
-
     // Load Fonts
     std::string fontPath = getAssetPath("assets/DayPosterBlackNF.ttf");
     font = TTF_OpenFont(fontPath.c_str(), 160);        // Increased for high-resolution oversampling
@@ -192,6 +150,8 @@ bool AssetManager::loadAssets(SDL_Window *window, SDL_Renderer *renderer, MIX_Mi
 
 void AssetManager::freeAssets()
 {
+    clearCache();
+
     if (boardTexture)
         SDL_DestroyTexture(boardTexture);
         
@@ -208,62 +168,6 @@ void AssetManager::freeAssets()
     if (legalMoveTexture)
         SDL_DestroyTexture(legalMoveTexture);
 
-    // Destroy button textures
-    if (newGameTex)
-        SDL_DestroyTexture(newGameTex);
-    if (newGameFilledTex)
-        SDL_DestroyTexture(newGameFilledTex);
-
-    if (undoTex)
-        SDL_DestroyTexture(undoTex);
-    if (undoFilledTex)
-        SDL_DestroyTexture(undoFilledTex);
-
-    if (redoTex)
-        SDL_DestroyTexture(redoTex);
-    if (redoFilledTex)
-        SDL_DestroyTexture(redoFilledTex);
-
-    if (onePlayerTex)
-        SDL_DestroyTexture(onePlayerTex);
-    if (onePlayerFilledTex)
-        SDL_DestroyTexture(onePlayerFilledTex);
-
-    if (twoPlayerTex)
-        SDL_DestroyTexture(twoPlayerTex);
-    if (twoPlayerFilledTex)
-        SDL_DestroyTexture(twoPlayerFilledTex);
-
-    if (resumeTex)
-        SDL_DestroyTexture(resumeTex);
-    if (resumeFilledTex)
-        SDL_DestroyTexture(resumeFilledTex);
-
-    if (soundOnTex)
-        SDL_DestroyTexture(soundOnTex);
-    if (soundOnFilledTex)
-        SDL_DestroyTexture(soundOnFilledTex);
-
-    if (soundOffTex)
-        SDL_DestroyTexture(soundOffTex);
-    if (soundOffFilledTex)
-        SDL_DestroyTexture(soundOffFilledTex);
-
-    if (homePageTex)
-        SDL_DestroyTexture(homePageTex);
-    if (homePageFilledTex)
-        SDL_DestroyTexture(homePageFilledTex);
-
-    if (privacyTex)
-        SDL_DestroyTexture(privacyTex);
-    if (privacyFilledTex)
-        SDL_DestroyTexture(privacyFilledTex);
-
-    if (homeTex)
-        SDL_DestroyTexture(homeTex);
-    if (homeFilledTex)
-        SDL_DestroyTexture(homeFilledTex);
-
     if (font)
         TTF_CloseFont(font);
     if (uiFont)
@@ -278,6 +182,116 @@ void AssetManager::freeAssets()
     if (winSfx)
         MIX_DestroyAudio(winSfx);
 }
+
+void AssetManager::updateDisplayScale(float newScale)
+{
+    if (m_currentDisplayScale != newScale)
+    {
+        m_currentDisplayScale = newScale;
+        clearCache(); // Force re-rasterization on next request
+    }
+}
+
+SDL_Texture *AssetManager::getButtonTexture(const std::string &filepath, int logicalWidth, int logicalHeight)
+{
+    // Create a unique cache key that includes the target dimensions
+    std::string cacheKey = filepath + "_" + std::to_string(logicalWidth) + "x" + std::to_string(logicalHeight);
+
+    // If it's already cached at this size, return it
+    if (m_textureCache.find(cacheKey) != m_textureCache.end())
+    {
+        return m_textureCache[cacheKey];
+    }
+
+    SDL_Texture *newTexture = nullptr;
+
+    // Check if the asset is an SVG file
+    size_t dotPos = filepath.find_last_of(".");
+    bool isSVG = false;
+    if (dotPos != std::string::npos)
+    {
+        std::string ext = filepath.substr(dotPos + 1);
+        for (auto &c : ext)
+            c = std::tolower(c);
+        if (ext == "svg")
+        {
+            isSVG = true;
+        }
+    }
+
+    if (isSVG)
+    {
+        // Calculate exact physical pixels needed by the VM graphics layer
+        int physicalWidth = static_cast<int>(logicalWidth * m_currentDisplayScale);
+        int physicalHeight = static_cast<int>(logicalHeight * m_currentDisplayScale);
+
+        // Rasterize natively via SDL3_image
+        SDL_IOStream *stream = SDL_IOFromFile(filepath.c_str(), "rb");
+        if (stream)
+        {
+            SDL_Surface *surface = IMG_LoadSizedSVG_IO(stream, physicalWidth, physicalHeight);
+            SDL_CloseIO(stream);
+
+            if (surface)
+            {
+                newTexture = SDL_CreateTextureFromSurface(m_renderer, surface);
+                SDL_DestroySurface(surface);
+            }
+        }
+        if (!newTexture)
+        {
+            SDL_Log("Warning: Could not load SVG from %s. Using procedural fallback.", filepath.c_str());
+            newTexture = createRectTexture(m_renderer, logicalWidth, logicalHeight, 100, 100, 100, 255);
+        }
+    }
+    else
+    {
+        // Fallback for standard PNGs/JPEGs
+        newTexture = IMG_LoadTexture(m_renderer, filepath.c_str());
+    }
+
+    if (newTexture)
+    {
+        m_textureCache[cacheKey] = newTexture;
+    }
+
+    return newTexture;
+}
+
+void AssetManager::clearCache()
+{
+    for (auto &pair : m_textureCache)
+    {
+        if (pair.second)
+        {
+            SDL_DestroyTexture(pair.second);
+        }
+    }
+    m_textureCache.clear();
+}
+
+AssetManager::~AssetManager()
+{
+    clearCache();
+}
+
+void AssetManager::setupButtonSVG(TextureButton &button, const std::string &normalPath, const std::string &hoverPath, const std::string &pressedPath)
+{
+    std::string norm = getAssetPath(normalPath);
+    std::string hov = hoverPath.empty() ? norm : getAssetPath(hoverPath);
+    std::string press = pressedPath.empty() ? norm : getAssetPath(pressedPath);
+
+    button.setTextureProvider([this, norm, hov, press](int state, int w, int h) -> SDL_Texture * {
+        if (state == 0) // TextureButton::STATE_NORMAL
+            return this->getButtonTexture(norm, w, h);
+        else if (state == 1) // TextureButton::STATE_HOVER
+            return this->getButtonTexture(hov, w, h);
+        else if (state == 2) // TextureButton::STATE_PRESSED
+            return this->getButtonTexture(press, w, h);
+        return nullptr;
+    });
+}
+
 
 // --- Procedural Generators ---
 
