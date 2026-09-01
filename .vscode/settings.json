@@ -1,7 +1,0 @@
-{
-  "files.autoSave": "afterDelay",
-  "git.enableSmartCommit": false,
-  "git.postCommitCommand": "none",
-  "git.rebaseWhenSync": false,
-  "git.confirmSync": true
-}
