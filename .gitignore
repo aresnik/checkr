@@ -16,5 +16,3 @@ emsdk/
 # Debug symbols
 *.dSYM/
 *.pdb
-
-.vscode/
