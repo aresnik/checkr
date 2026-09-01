@@ -110,12 +110,18 @@ std::vector<Square> GameController::getLegalMovesForSelection(board &b, int row,
     return legalMoves;
 }
 
+// Checks if a checker movement animation is currently active or has remaining path segments
+bool GameController::isAnimating() const
+{
+    return animation.active || !animationPath.empty();
+}
+
 // Handles a mouse click on the board.
 bool GameController::handleClick(board &b, int row, int col, std::vector<MoveRecord> &history, int &historyIndex)
 {
     // Ignore input while an animation is running, while AI is thinking,
     // or when it is the black AI player's turn.
-    if (animation.active || aiThinking || (!pvpMode && b.getTurnPublic() == 'b'))
+    if (isAnimating() || aiThinking || (!pvpMode && b.getTurnPublic() == 'b'))
         return false;
 
     // Ignore clicks outside the board.
@@ -200,41 +206,6 @@ bool GameController::handleClick(board &b, int row, int col, std::vector<MoveRec
             selectedCol = -1;
             legalMoves.clear();
 
-            // If the human move succeeded and it is now the AI's turn,
-            // start AI move search on a detached background thread.
-            if (!pvpMode && moved && b.getTurnPublic() == 'b' && !aiThinking)
-            {
-                aiThinking = true;
-
-                // Copy the board so the AI thread does not directly mutate the live board.
-                board boardCopy = b;
-
-                // Join the previous thread if it finished but wasn't cleaned up
-                if (aiThread.joinable())
-                    aiThread.join();
-
-                int limit = aiTimeLimit;
-                aiThread = std::thread([boardCopy, this, limit]() mutable
-                                       {
-                    currentSearchDepth = 0; // Reset depth at start of search
-
-                    int fr, fc, tr, tc;
-
-                    // Search for the AI's best move at specified depth
-                    bool found = boardCopy.findBestMove8x8(limit, fr, fc, tr, tc, &currentSearchDepth, &aiThinking);
-
-                    if (found && aiThinking)
-                    {
-                        // Store the chosen AI move safely because this runs on another thread.
-                        std::lock_guard<std::mutex> lock(aiMutex);
-                        aiFrom = {fr, fc};
-                        aiTo = {tr, tc};
-                        aiMoveReady = true;
-                    }
-
-                    // Mark the AI as done thinking.
-                    aiThinking = false; });
-            }
             return moved; // Return whether the move was successful to trigger sound
         }
     }
@@ -258,8 +229,49 @@ bool GameController::isCurrentPlayersPiece(const board &b, int row, int col) con
 // Applies the AI's completed move to the live board once the background thread has found it.
 bool GameController::updateAI(board &b, std::vector<MoveRecord> &history, int &historyIndex)
 {
-    // Only apply the AI move once it is ready and no animation is currently active.
-    if (aiMoveReady && !animation.active)
+    // If animations are still running or it's PVP mode, do not process AI.
+    if (isAnimating() || pvpMode)
+        return false;
+
+    // 1. If it is AI's turn and AI is not thinking and no AI move is ready, start AI search!
+    if (b.getTurnPublic() == 'b' && !aiThinking && !aiMoveReady)
+    {
+        aiThinking = true;
+
+        // Copy the board so the AI thread does not directly mutate the live board.
+        board boardCopy = b;
+
+        // Join the previous thread if it finished but wasn't cleaned up
+        if (aiThread.joinable())
+            aiThread.join();
+
+        int limit = aiTimeLimit;
+        aiThread = std::thread([boardCopy, this, limit]() mutable
+                               {
+            currentSearchDepth = 0; // Reset depth at start of search
+
+            int fr, fc, tr, tc;
+
+            // Search for the AI's best move at specified depth
+            bool found = boardCopy.findBestMove8x8(limit, fr, fc, tr, tc, &currentSearchDepth, &aiThinking);
+
+            if (found && aiThinking)
+            {
+                // Store the chosen AI move safely because this runs on another thread.
+                std::lock_guard<std::mutex> lock(aiMutex);
+                aiFrom = {fr, fc};
+                aiTo = {tr, tc};
+                aiMoveReady = true;
+            }
+
+            // Mark the AI as done thinking.
+            aiThinking = false; });
+
+        return false;
+    }
+
+    // 2. Only apply the AI move once it is ready and no animation is currently active.
+    if (aiMoveReady && !isAnimating())
     {
         Square from;
         Square to;
@@ -302,13 +314,28 @@ bool GameController::updateAI(board &b, std::vector<MoveRecord> &history, int &h
 // Continues a multi-segment animation path, such as a multi-jump move.
 void GameController::updateAnimation()
 {
-    // If a segment is still animating, do nothing.
+    // If a segment is still animating, check if it reached its duration.
     if (animation.active)
-        return;
+    {
+        Uint64 elapsed = SDL_GetTicks() - animation.startTime;
+        if (elapsed >= (Uint64)animation.durationMs)
+        {
+            animation.active = false;
+        }
+        else
+        {
+            return;
+        }
+    }
 
     // No path or only one point means nothing to continue.
     if (animationPath.size() < 2)
+    {
+        animationPath.clear();
+        pendingCaptures.clear();
+        animationPathIndex = 0;
         return;
+    }
 
     // If we already reached the last segment, clear the path state.
     if (animationPathIndex >= static_cast<int>(animationPath.size()) - 1)

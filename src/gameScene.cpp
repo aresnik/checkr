@@ -33,6 +33,8 @@ GameScene::GameScene(AppState *state)
                                {
         if (historyIndex > 0)
         {
+            controller.stopAI();
+            controller.aiMoveReady = false;
             MoveRecord m = history[historyIndex - 1];
             historyIndex--;
             replayHistory(state);
@@ -47,6 +49,8 @@ GameScene::GameScene(AppState *state)
                                {
         if (historyIndex < (int)history.size())
         {
+            controller.stopAI();
+            controller.aiMoveReady = false;
             MoveRecord m = history[historyIndex];
             char piece = b.getPieceAt8x8(m.fromRow, m.fromCol);
             controller.setupPathAnimation(b, piece, m.fromRow, m.fromCol, m.toRow, m.toCol);
@@ -132,6 +136,8 @@ void GameScene::enter(AppState *state)
 
     if (state->startNewGame)
     {
+        controller.stopAI();
+        controller.aiMoveReady = false;
         b.startup();
         winner = 0;
         history.clear();
@@ -149,7 +155,7 @@ void GameScene::updateLayout(AppState *state)
         lastDisplayedDepth = currentDepth;
     }
 
-    bool engineIdle = !controller.aiThinking && !controller.animation.active;
+    bool engineIdle = !controller.aiThinking && !controller.isAnimating();
     undoBtn.enabled = engineIdle && (historyIndex > 0);
     redoBtn.enabled = engineIdle && (historyIndex < (int)history.size());
     newGameBtn.enabled = engineIdle && (winner != 0 || historyIndex == 0);
@@ -180,8 +186,8 @@ void GameScene::handleEvent(AppState *state, SDL_Event *event)
 void GameScene::update(AppState *state)
 {
     updateLayout(state);
-    controller.updateAI(b, history, historyIndex);
     controller.updateAnimation();
+    controller.updateAI(b, history, historyIndex);
 
     if (controller.soundTrigger > 0)
     {
@@ -192,7 +198,7 @@ void GameScene::update(AppState *state)
         controller.soundTrigger = 0;
     }
 
-    if (!controller.animation.active && winner == 0 && b.terminalTest())
+    if (!controller.isAnimating() && winner == 0 && b.terminalTest())
     {
         winner = (b.getTurnPublic() == 'r') ? 2 : 1;
         std::cout << "Game Over! Winner: " << (winner == 1 ? "Red" : "Black") << std::endl;

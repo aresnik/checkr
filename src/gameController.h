@@ -118,6 +118,9 @@ public:
     // Current position within the animation path
     int animationPathIndex = 0;
 
+    // Checks if a checker movement animation is currently active or has remaining path segments
+    bool isAnimating() const;
+
     // Updates animation progress each frame
     void updateAnimation();
 

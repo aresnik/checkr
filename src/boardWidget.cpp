@@ -116,7 +116,7 @@ void BoardWidget::drawPieces(SDL_Renderer *renderer)
             if (piece == 'e')
                 continue;
 
-            if (controller.animation.active)
+            if (controller.isAnimating())
             {
                 bool isPending = false;
                 for (const auto &cp : controller.pendingCaptures)
@@ -197,13 +197,10 @@ void BoardWidget::drawMoveAnimation(SDL_Renderer *renderer)
     if (!animation.active)
         return;
     Uint64 elapsed = SDL_GetTicks() - animation.startTime;
-    if (elapsed >= (Uint64)animation.durationMs)
-    {
-        animation.active = false;
-        return;
-    }
-
     float t = static_cast<float>(elapsed) / static_cast<float>(animation.durationMs);
+    if (t > 1.0f)
+        t = 1.0f;
+
     float fromX = animation.fromCol * tileSize + tileSize / 2.0f + rect.x;
     float fromY = animation.fromRow * tileSize + tileSize / 2.0f + rect.y;
     float toX = animation.toCol * tileSize + tileSize / 2.0f + rect.x;
