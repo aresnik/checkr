@@ -51,4 +51,4 @@ $(TARGET): $(ALL_SRCS)
 	$(CXX) $(CXXFLAGS) $(ALL_SRCS) $(STATIC_LIBS) -o $(TARGET)
 
 clean:
-	rm -rf  web/index.html web/*.js web/*.wasm web/*.data
+	rm -rf  web/index.*

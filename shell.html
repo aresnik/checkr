@@ -224,6 +224,36 @@
     <!-- Emscripten injects the compiled JS tags here -->
     {{{ SCRIPT }}}
 
+    <script>
+        if ('serviceWorker' in navigator) {
+            // 1. Register our service worker file located in the web folder
+            navigator.serviceWorker.register('./service-worker.js')
+                .then(reg => {
+                    // 2. Force an update check on launch
+                    reg.update();
+
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            // 3. If a new C++ Wasm build is ready, tell it to take over
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                newWorker.postMessage({ action: 'skipWaiting' });
+                            }
+                        });
+                    });
+                });
+
+            // 4. Reload the page smoothly to instantly show the updated C++ code
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    refreshing = true;
+                    window.location.reload();
+                }
+            });
+        }
+    </script>
+
 </body>
 
 </html>
